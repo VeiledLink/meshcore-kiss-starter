@@ -1,0 +1,40 @@
+# meshcore-pi config for a KISS modem radio + one companion identity that
+# RemoteTerm connects to. Copy to ~/meshcore-pi/config.toml and edit.
+# Run:  venv/bin/python meshcore.py config.toml
+
+interfaces = ["kiss"]
+devices = ["companion"]
+
+[dispatcher]
+pass_internal = false
+
+# A radio flashed with MeshCore's official kiss_modem firmware
+# (e.g. RAK_4631_kiss_modem). Use the /dev/serial/by-id/ path, not ttyACM0:
+# it stays the same across reboots and when more radios are plugged in.
+#   ls /dev/serial/by-id/
+# The modem forgets its radio settings on every reboot; these are sent each
+# time meshcore-pi connects. Match your mesh's settings.
+[interface.kiss]
+type = "kiss"
+port = "/dev/serial/by-id/usb-RAKwireless_WisCore_RAK4631_Board_XXXXXXXXXXXXXXXX-if00"
+freq = 910.525      # MHz (US preset; change for your region/mesh)
+bw = 62.5           # kHz
+sf = 7
+cr = 5
+txpower = 17        # dBm; lower it if the antenna is near other radios
+
+[device.companion]
+name = "My-Bot"
+# privatekey = "..."   # printed on first start - paste it here to keep the same identity
+contacts = "contacts.mesh"
+channels = 32
+channelfile = "channels.json"
+add_public_channel = false
+
+# RemoteTerm connects here. 127.0.0.1 = only programs on this computer can.
+interface = "wifi"
+wifi.port = 5000
+wifi.listen = "127.0.0.1"
+
+[log]
+level = "info"
