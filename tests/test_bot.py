@@ -16,7 +16,8 @@ with sqlite3.connect(db) as c:
         ("4f4c" + "0" * 60, "Hill Repeater", 2, 37.0, -120.0, 1),
         ("aa11" + "0" * 60, "Car", 1, 36.5, -119.5, 1),
     ])
-b.SETTINGS.update(db=db, lat=37.3, lon=-120.4, town="Merced", bot_name="My-Bot")
+b.SETTINGS.update(db=db, lat=37.3, lon=-120.4, town="Merced", bot_name="My-Bot", weather=False,
+                  commands={"rules": "Be kind, {name}."}, quiet_channels=["Public"])
 ok = True
 
 
@@ -55,5 +56,15 @@ b._STATE.clear()
 b._note_sender("🍩 Dee", False)
 check("emoji in a name ignored", b.bot(message_text="🍩 Dee! 4 hops", sender_name="Other", channel_name="#chat") is None)
 check("other bots ignored", call("☕", sender_name="SomeBot", channel_name="#chat") is None)
+check("custom command", call("@[My-Bot] rules", channel_name="#chat") == "@[Sam] Be kind, Sam.")
+check("custom command by DM", call("!rules", is_dm=True, channel_name=None) == "Be kind, Sam.")
+h = call("help", is_dm=True, channel_name=None)
+check("help lists custom, hides weather when off", "rules" in h and "weather" not in h)
+check("unknown DM gets one hint", call("hi", is_dm=True, channel_name=None).startswith("Hi!"))
+b.SETTINGS["units"] = "metric"
+check("metric distance", "km ACF" in (call("test") or ""))
+b.SETTINGS["units"] = "imperial"
+b.SETTINGS["reactions"] = False
+check("reactions can be turned off", call("morning ☕", channel_name="#chat") is None)
 print("ALL PASS" if ok else "SOME FAILED")
 sys.exit(0 if ok else 1)
