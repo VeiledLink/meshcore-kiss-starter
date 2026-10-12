@@ -4,7 +4,8 @@ Everything you need to run your own **MeshCore bot** on a Raspberry Pi: one inst
 questions, and your bot is on the mesh. Add your own commands without touching any code.
 
 It runs on a radio with **MeshCore's official KISS modem firmware**, so there's no custom radio firmware to
-build or maintain. Made from the setup behind **VLK-Bot** on the Central Valley (California) mesh.
+build or maintain. The radio and node setup comes from **VLK-Bot** on the Central Valley (California) mesh.
+The bot here is a separate, simpler starter bot: VLK-Bot itself is private for now.
 
 ## What the bot does
 
