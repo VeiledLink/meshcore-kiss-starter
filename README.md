@@ -76,6 +76,15 @@ Reply for 'rules': Be kind, no spam. Welcome {name}!
 `{name}` becomes the sender's name. Keep replies under ~100 characters so they fit in one mesh message.
 Remove a command by entering `-rules`.
 
+## Updating
+
+Pull the latest fixes and re-apply them:
+```bash
+cd ~/meshcore-kiss-starter && git pull
+meshcore-pi/patch_meshcore_pi.sh && sudo systemctl restart meshcore-pi
+python3 bot/deploy_bot.py
+```
+
 ## How it fits together
 
 ```

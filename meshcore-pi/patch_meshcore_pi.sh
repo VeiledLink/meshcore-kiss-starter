@@ -19,6 +19,10 @@
 #     kiss_modem firmware (kissinterface.py, next to this script).
 #  7. ACKs longer than 4 bytes (current firmware) are accepted, so DMs stop
 #     looking undelivered.
+#  8. DM routes are read and reported in MeshCore's real format (2/3-byte hop
+#     codes, the 64-byte route field, 255 = no route). Before this, nearly
+#     every saved route was garbage, so delivery confirmations (ACKs) went
+#     nowhere and phones showed "Failed" for messages that did arrive.
 set -euo pipefail
 
 MCP_DIR="${MCP_DIR:-$HOME/meshcore-pi}"
@@ -168,6 +172,63 @@ patch("packet.py", "ACKs can carry more than 4 bytes",
         if len(self._payload) < 4:
             raise InvalidMeshcorePacket("Ack packet payload is shorter than 4 bytes")
         self.ackhash = bytes(self._payload[:4])""")
+
+# 8. routes in MeshCore's real format
+patch("packet.py", "the length byte became the first hop",
+"""            pathlen = self.packetdata[0]
+            # If pathlen = 0 (direct), pathdata = []
+            self.pathdata = self.packetdata[0:pathlen]
+
+            self.extra_type = None
+            # Gather up anything left after the path
+            extra = self.packetdata[pathlen+1:]""",
+"""            # Path length byte (as in packet headers): low 6 bits = hops, top
+            # 2 bits = bytes per hop - 1; the path follows it. (This used to
+            # slice from byte 0, so the length byte became the first hop.)
+            # Direct packets from meshcore-pi use 1-byte hop codes; a longer
+            # code's first byte is its 1-byte code.
+            meta = self.packetdata[0]
+            size, count = (meta >> 6) + 1, meta & 0x3F
+            raw = self.packetdata[1:1 + count * size]
+            self.pathdata = bytearray(raw[i * size] for i in range(len(raw) // size))
+
+            self.extra_type = None
+            # Gather up anything left after the path
+            extra = self.packetdata[1 + count * size:]""")
+
+patch("companionradio.py", "route field is always 64 bytes",
+"""        pathlen = contactdata[34]
+
+        # If pathlen is 0 (ie, direct, zero-hop), path will be [] (as a bytes object, ie b'')
+        path = contactdata[35:35+pathlen]
+
+        rest = contactdata[35+pathlen:]""",
+"""        pathlen = contactdata[34]
+
+        # The route field is always 64 bytes, then the name. Length byte:
+        # 255 = no route (flood); else low 6 bits = hops, top 2 bits = bytes
+        # per hop - 1. Kept as 1-byte hop codes (what meshcore-pi sends with).
+        size, count = (pathlen >> 6) + 1, pathlen & 0x3F
+        if pathlen == 0xFF or size > 3 or count * size > 64:
+            path = None
+        else:
+            raw = contactdata[35:35 + count * size]
+            path = bytes(raw[i * size] for i in range(len(raw) // size))
+
+        rest = contactdata[35 + 64:]""")
+
+patch("companionradio.py", "No route is 255",
+"""        if contact.path is None:
+            path = bytes()
+        else:
+            path = contact.path
+        contactresponse += struct.pack("<BBB", contact.advert.adv_type.value, contact.advert.adv_flags.value, len(path))""",
+"""        # No route is 255 ("flood"), not 0 - 0 means a direct neighbour.
+        if contact.path is None or len(contact.path) > 63:
+            path, pathlen = bytes(), 0xFF
+        else:
+            path, pathlen = bytes(contact.path), len(contact.path)
+        contactresponse += struct.pack("<BBB", contact.advert.adv_type.value, contact.advert.adv_flags.value, pathlen)""")
 
 patch("interfaces/interface.py", 'interface_type == "kiss"',
 """        else:
