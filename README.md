@@ -8,17 +8,18 @@ build or maintain. Made from the setup behind **VLK-Bot** on the Central Valley 
 
 ## What the bot does
 
+A simple, friendly bot you can build on:
+
 | Command | Reply |
 |---|---|
-| `test` / `path` | `@[Sam] 4 hops to Fresno, 38mi ACF \| 4f4c→3a50→c0d2→1145`: hops, straight-line distance, and the repeaters it came through |
-| `ping` | `pong` plus the same summary |
-| `weather` | Current weather and today's high/low where the bot is (free, no API key) |
+| `test` | `@[Sam] ack: 3 hops \| 4f4c→3a50→1145`: how many hops your message took, and through which repeaters |
+| `ping` | `pong` |
 | `help` | The command list, including yours |
 | **your own** | Anything you add during setup, e.g. `rules` → "Be kind, no spam." |
 
 People use commands by **DM**, or in a channel with **`@[YourBot] command`**. In your test channel a plain
-**`test`** works on its own. The bot also has per-person cooldowns, channels it never talks in (like Public),
-and short replies to ☕ 🍕 🍩.
+**`test`** works on its own. The bot never talks in channels you mark as quiet (like Public), and answers each
+person at most once every 30 seconds (you can change this).
 
 ## What you need
 
@@ -41,7 +42,7 @@ cd ~/meshcore-kiss-starter
 ```
 The installer:
 1. installs **meshcore-pi** (the MeshCore node software) and adds KISS radio support
-2. asks your **bot settings**: name, town, location, radio, frequency, channels, and your own commands
+2. asks your **bot settings**: name, channels, your own commands, and the radio and frequency
 3. starts the node as a service (it starts at boot and restarts by itself)
 4. installs **RemoteTerm** (a web UI that also runs the bot). Its installer asks a few questions, and
    `install.sh` tells you exactly what to answer.
@@ -61,7 +62,7 @@ Changed the radio (frequency, power, port)? Run `python3 setup.py` (answer yes t
 `sudo systemctl restart meshcore-pi`.
 
 Your settings live in `bot/settings.json`, and you can edit that file directly instead of running setup.
-To change how the bot *works*, edit `bot/starter_bot.py`. It's plain Python and commented. Then run
+To change how the bot *works* or add smarter commands, edit `bot/starter_bot.py`. It's short, plain Python. Then run
 `python3 bot/deploy_bot.py` again.
 
 ## Your own commands

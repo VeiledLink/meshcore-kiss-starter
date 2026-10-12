@@ -2,7 +2,7 @@
 """Set up your bot by answering a few questions.
 
 Writes:
-  bot/settings.json        the bot's settings (name, town, channels, your commands...)
+  bot/settings.json        the bot's settings (name, channels, your commands)
   ~/meshcore-pi/config.toml  the radio and node settings (only with --radio, or when asked)
 
     python3 setup.py           ask everything
@@ -24,7 +24,6 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SETTINGS_FILE = HERE / "bot" / "settings.json"
 MCP_DIR = Path(os.environ.get("MCP_DIR", Path.home() / "meshcore-pi"))
-REMOTETERM_DB = Path(os.environ.get("REMOTETERM_DIR", Path.home() / "Remote-Terminal-for-MeshCore")) / "data/meshcore.db"
 
 PRESETS = [   # (label, MHz, kHz, SF, CR) - MeshCore's app presets
     ("USA / Canada (recommended)", 910.525, 62.5, 7, 5),
@@ -64,47 +63,32 @@ def section(title):
 
 def bot_settings(old):
     section("Your bot")
-    s = dict(old)
+    s = {}
     s["bot_name"] = ask("Bot name (what people see on the mesh)", old.get("bot_name", "My-Bot"))
-    s["town"] = ask("Town the bot is in (used in replies: '3 hops to <town>')", old.get("town", ""))
-    print("Location (for distances and weather). Tip: in Google Maps, long-press the spot and copy the")
-    print("numbers, e.g. 37.30, -120.48. Leave blank to skip.")
-    loc = ask("Latitude, longitude", f"{old['lat']}, {old['lon']}" if old.get("lat") else "")
-    m = re.match(r"\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$", loc)
-    s["lat"], s["lon"] = (round(float(m[1]), 4), round(float(m[2]), 4)) if m else (0.0, 0.0)
-    s["units"] = "metric" if ask("Units: imperial (mi, °F) or metric (km, °C)",
-                                 old.get("units", "imperial")).lower().startswith("m") else "imperial"
 
     section("Channels")
-    s["test_channel"] = "#" + ask("Test channel (a plain 'test' there gets the hop reply)",
+    s["test_channel"] = "#" + ask("Test channel (a plain 'test' there gets a reply)",
                                   old.get("test_channel", "#test")).lstrip("#")
     quiet = ask("Channels the bot must never reply in (comma separated)",
                 ", ".join(old.get("quiet_channels", ["Public"])))
     s["quiet_channels"] = [q.strip() for q in quiet.split(",") if q.strip()]
-
-    section("Features")
-    s["weather"] = ask_yes("Weather command?", old.get("weather", True)) if s["lat"] else False
-    s["reactions"] = ask_yes("Short replies to coffee/pizza/donut emojis?", old.get("reactions", True))
     s["cooldown_s"] = ask_number("Seconds between replies to the same person", old.get("cooldown_s", 30), int, 0, 3600)
-    admin = ask("Your own public key (64 hex characters, skips the cooldown; blank = none)",
-                ",".join(old.get("admin_keys", [])))
-    s["admin_keys"] = [k.strip().lower() for k in admin.split(",") if re.fullmatch(r"[0-9a-fA-F]{64}", k.strip())]
 
     section("Your own commands")
     print("Commands that answer with a fixed reply, e.g.  rules -> Be kind, no spam.")
-    print("{name} in a reply becomes the sender's name. Built in already: test, ping, path, weather, help.")
+    print("{name} in a reply becomes the sender's name. Built in already: test, ping, help.")
     cmds = dict(old.get("commands", {"about": "I'm a MeshCore bot. Send help for commands."}))
     while True:
         if cmds:
-            print("  Current: " + ", ".join(f"{k}" for k in cmds))
+            print("  Current: " + ", ".join(cmds))
         word = ask("Command to add or change (blank = done, -word = remove)").lower().lstrip("!")
         if not word:
             break
         if word.startswith("-"):
             cmds.pop(word[1:], None)
             continue
-        if not re.fullmatch(r"[a-z0-9_-]{1,20}", word):
-            print("  One word, letters/numbers only.")
+        if not re.fullmatch(r"[a-z0-9_-]{1,20}", word) or word in ("test", "ping", "help"):
+            print("  One word, letters/numbers only (and not test, ping or help).")
             continue
         reply = ask(f"Reply for '{word}'", cmds.get(word, ""))
         if reply:
@@ -112,9 +96,6 @@ def bot_settings(old):
                 print("  Note: long replies get cut to fit one mesh message (~100 characters).")
             cmds[word] = reply
     s["commands"] = cmds
-    s.setdefault("reaction_channel_s", 60)
-    s.setdefault("reaction_person_min", 60)
-    s["db"] = str(REMOTETERM_DB)
     return s
 
 
